@@ -4,7 +4,7 @@
 # * Appropriate resources allocation, e.g. 
 #   `salloc -N 1 -n 12 -t 00:30:00 --gres=gpu:1 --mem=32G`
 
-# * Environement with nextflow and the required dependencies installed
+# * Environment with nextflow and the required dependencies installed
 #     e.g., create an environment.yml file with the following content:
 #     ```
 #     name: aind-ephys-pipeline
@@ -54,11 +54,18 @@ fi
 
 # define INPUT and OUTPUT directories
 DATA_PATH="$SAMPLE_DATASET_PATH/nwb"
-RESULTS_PATH="$SAMPLE_DATASET_PATH/nwb/results"
+RESULTS_PATH="$SAMPLE_DATASET_PATH/nwb_results"
+
+# check if nextflow_local_custom.config exists
+if [ -f "$PIPELINE_PATH/pipeline/nextflow_slurm_custom.config" ]; then
+    CONFIG_FILE="$PIPELINE_PATH/pipeline/nextflow_slurm_custom.config"
+else
+    CONFIG_FILE="$PIPELINE_PATH/pipeline/nextflow_slurm.config"
+fi
+echo "Using config file: $CONFIG_FILE"
 
 # run pipeline
-NXF_VER=22.10.8 DATA_PATH=$DATA_PATH RESULTS_PATH=$RESULTS_PATH nextflow \
-    -C $PIPELINE_PATH/pipeline/nextflow_slurm_custom.config \
-    -log $RESULTS_PATH/nextflow/nextflow.log \
-    run $PIPELINE_PATH/pipeline/main_slurm.nf \
-    --sorter kilosort4 --job_dispatch_args "--input nwb"
+DATA_PATH=$DATA_PATH RESULTS_PATH=$RESULTS_PATH nextflow \
+    -C $CONFIG_FILE -log $RESULTS_PATH/nextflow/nextflow.log \
+    run $PIPELINE_PATH/pipeline/main_multi_backend.nf \
+    --params_file params_test.json $ARGS
