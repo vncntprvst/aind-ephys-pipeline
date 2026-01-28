@@ -4,6 +4,25 @@ nextflow.enable.dsl = 2
 params.ecephys_path = DATA_PATH
 params.params_file = null
 
+// Git repository prefix - can be overridden via command line or environment variable
+params.git_repo_prefix = System.getenv('GIT_REPO_PREFIX') ?: 'https://github.com/AllenNeuralDynamics/aind-'
+
+// Helper function for git cloning
+def gitCloneFunction = '''
+clone_repo() {
+    local repo_url="$1"
+    local commit_hash="$2"
+
+    echo "cloning git repo: \${repo_url} (commit: \${commit_hash})..."
+
+    git clone "\${repo_url}" capsule-repo
+    git -C capsule-repo -c core.fileMode=false checkout "\${commit_hash}" --quiet
+
+    mv capsule-repo/code capsule/code
+    rm -rf capsule-repo
+}
+'''
+
 println "DATA_PATH: ${DATA_PATH}"
 println "RESULTS_PATH: ${RESULTS_PATH}"
 
@@ -101,13 +120,6 @@ if (params.params_file && json_params.visualization) {
     visualization_kwargs = params.visualization_kwargs
 }
 
-def nwb_subject_args = ""
-if (params.params_file && json_params.nwb?.backend) {
-    nwb_subject_args = "--backend ${json_params.nwb.backend}"
-} else if ("nwb_subject_args" in params_keys) {
-    nwb_subject_args = params.nwb_subject_args
-}
-
 def nwb_ecephys_args = ""
 if (params.params_file && json_params.nwb?.ecephys) {
     nwb_ecephys_args = "--params '${groovy.json.JsonOutput.toJson(json_params.nwb.ecephys)}'"
@@ -135,6 +147,10 @@ if (params.params_file && json_params.spikesorting) {
     spikesorting_args = params.spikesorting_args
 }
 
+if (sorter == null) {
+    println "No sorter specified, defaulting to kilosort4"
+    sorter = "kilosort4"
+}
 
 println "Using SORTER: ${sorter} with args: ${spikesorting_args}"
 
@@ -179,10 +195,8 @@ process job_dispatch {
     TASK_DIR=\$(pwd)
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-ephys-job-dispatch.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['JOB_DISPATCH']}  --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}ephys-job-dispatch.git" "${versions['JOB_DISPATCH']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
@@ -227,10 +241,8 @@ process preprocessing {
     fi
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-ephys-preprocessing.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['PREPROCESSING']}  --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}ephys-preprocessing.git" "${versions['PREPROCESSING']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
@@ -268,10 +280,8 @@ process spikesort_kilosort25 {
     fi
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-ephys-spikesort-kilosort25.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['SPIKESORT_KS25']} --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}ephys-spikesort-kilosort25.git" "${versions['SPIKESORT_KS25']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
@@ -309,10 +319,8 @@ process spikesort_kilosort4 {
     fi
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-ephys-spikesort-kilosort4.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['SPIKESORT_KS4']} --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}ephys-spikesort-kilosort4.git" "${versions['SPIKESORT_KS4']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
@@ -350,10 +358,8 @@ process spikesort_spykingcircus2 {
     fi
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-ephys-spikesort-spykingcircus2.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['SPIKESORT_SC2']} --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}ephys-spikesort-spykingcircus2.git" "${versions['SPIKESORT_SC2']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
@@ -394,10 +400,8 @@ process postprocessing {
     fi
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-ephys-postprocessing.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['POSTPROCESSING']} --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}ephys-postprocessing.git" "${versions['POSTPROCESSING']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
@@ -435,10 +439,8 @@ process curation {
     fi
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-ephys-curation.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['CURATION']} --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}ephys-curation.git" "${versions['CURATION']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
@@ -481,10 +483,8 @@ process visualization {
     fi
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-ephys-visualization.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['VISUALIZATION']} --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}ephys-visualization.git" "${versions['VISUALIZATION']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
@@ -532,14 +532,12 @@ process results_collector {
     fi
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-ephys-results-collector.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['RESULTS_COLLECTOR']} --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}ephys-results-collector.git" "${versions['RESULTS_COLLECTOR']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
-    chmod +x run 
+    chmod +x run
     ./run --pipeline-data-path ${DATA_PATH} --pipeline-results-path ${RESULTS_PATH}
 
     echo "[${task.tag}] completed!"
@@ -575,10 +573,8 @@ process quality_control {
     fi
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-ephys-processing-qc.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['QUALITY_CONTROL']} --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}ephys-processing-qc.git" "${versions['QUALITY_CONTROL']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
@@ -618,10 +614,8 @@ process quality_control_collector {
     fi
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-ephys-qc-collector.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['QUALITY_CONTROL_COLLECTOR']} --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}ephys-qc-collector.git" "${versions['QUALITY_CONTROL_COLLECTOR']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
@@ -659,10 +653,8 @@ process nwb_subject {
     fi
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-subject-nwb" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['NWB_SUBJECT']} --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}subject-nwb.git" "${versions['NWB_SUBJECT']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
@@ -682,7 +674,6 @@ process nwb_ecephys {
     val max_duration_minutes
     path ecephys_session_input, stageAs: 'capsule/data/ecephys_session'
     path job_dispatch_results, stageAs: 'capsule/data/*'
-    path nwb_subject_results, stageAs: 'capsule/data/*'
 
     output:
     path 'capsule/results/*', emit: results
@@ -702,10 +693,8 @@ process nwb_ecephys {
     fi
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-ecephys-nwb.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['NWB_ECEPHYS']} --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}ecephys-nwb.git" "${versions['NWB_ECEPHYS']}"
 
     echo "[${task.tag}] running capsule..."
     cd capsule/code
@@ -744,10 +733,8 @@ process nwb_units {
     mkdir -p capsule/scratch
 
     echo "[${task.tag}] cloning git repo..."
-    git clone "https://github.com/AllenNeuralDynamics/aind-units-nwb.git" capsule-repo
-    git -C capsule-repo -c core.fileMode=false checkout ${versions['NWB_UNITS']}  --quiet
-    mv capsule-repo/code capsule/code
-    rm -rf capsule-repo
+    ${gitCloneFunction}
+    clone_repo "${params.git_repo_prefix}units-nwb.git" "${versions['NWB_UNITS']}"
 
     if [[ ${params.executor} == "slurm" ]]; then
         echo "[${task.tag}] allocated task time: ${task.time}"
@@ -851,18 +838,11 @@ workflow {
         quality_control_out.results.collect()
     )
 
-    // NWB subject
-    nwb_subject_out = nwb_subject(
-        max_duration_minutes,
-        ecephys_ch.collect()
-    )
-
     // NWB ecephys
     nwb_ecephys_out = nwb_ecephys(
         max_duration_minutes,
         ecephys_ch.collect(),
         job_dispatch_out.results.collect(),
-        nwb_subject_out.results.collect()
     )
 
     // NWB units

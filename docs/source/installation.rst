@@ -13,7 +13,7 @@ Local Deployment
 For local deployment, you need:
 
 * ``nextflow`` (version 22.10.8 recommended)
-* ``docker``
+* ``docker`` (19.03+ if going to use GPUs, e.g. for spikesort_kilosort* workflows)
 * ``figurl`` (optional, for cloud visualization)
 
 SLURM Deployment
@@ -22,7 +22,7 @@ SLURM Deployment
 For SLURM cluster deployment:
 
 * ``nextflow`` (version 22.10.8 recommended)
-* ``singularity`` or ``apptainer``
+*  ``apptainer`` or ``singularity``
 * Access to a SLURM cluster
 * ``figurl`` (optional, for cloud visualization)
 
@@ -68,16 +68,16 @@ SLURM Setup
 ~~~~~~~~~~~
 
 1. Install Nextflow on your cluster environment
-2. Ensure Singularity/Apptainer is available
+2. Ensure Apptainer/Singularity is available
 3. Set up environment variables:
 
    .. code-block:: bash
 
-      # Optional: Set custom Singularity cache directory
-      export NXF_SINGULARITY_CACHEDIR="/path/to/cache"
+      # Optional: Set custom Apptainer (or Singularity) cache directory
+      export NXF_APPTAINER_CACHEDIR="/path/to/cache"
+      # export NXF_SINGULARITY_CACHEDIR="/path/to/cache"
 
 4. (Optional) Follow the same Figurl setup steps as in the local deployment
-5. # ADD NUMBA CACHE SETUP
 
 Clone the Repository
 --------------------
@@ -87,6 +87,7 @@ Clone the pipeline repository:
 .. code-block:: bash
 
    git clone https://github.com/AllenNeuralDynamics/aind-ephys-pipeline.git
-   cd aind-ephys-pipeline/pipeline
+   cd aind-ephys-pipeline
+   cd pipeline
 
 The pipeline is now ready to be configured and run on your chosen platform.
